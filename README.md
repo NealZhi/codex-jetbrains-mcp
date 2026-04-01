@@ -81,6 +81,12 @@ source ~/.zshrc
 source ~/.bashrc
 ```
 
+如果你在 macOS 自带终端或 Warp 终端里发现鼠标滚轮无法滚动 Codex 窗口，可以执行下面这条命令开启 `tmux` 鼠标支持：
+
+```bash
+tmux set -g mouse on
+```
+
 HUD 启动后会显示两行：
 
 ```text

@@ -72,6 +72,12 @@ If you use `bash`:
 source ~/.bashrc
 ```
 
+If mouse scrolling does not work for the Codex window in macOS Terminal or Warp, enable `tmux` mouse support with:
+
+```bash
+tmux set -g mouse on
+```
+
 The HUD should show:
 
 ```text
