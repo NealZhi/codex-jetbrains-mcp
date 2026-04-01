@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HUD_CMD=(node "${ROOT_DIR}/src/hud.mjs" --cwd "${PWD}")
-CODEX_CMD_BIN="${CODEX_JB_HUD_CODEX_BIN:-$(command -v codex || true)}"
+CODEX_CMD_BIN="$(command -v codex || true)"
 SESSION_NAME="codex-jb-hud-$(date +%Y%m%d%H%M%S)-$$"
 HUD_HEIGHT="${CODEX_JB_HUD_HEIGHT:-1}"
 HUD_POSITION="${CODEX_JB_HUD_POSITION:-bottom}"
