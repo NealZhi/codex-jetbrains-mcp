@@ -1,0 +1,26 @@
+{
+  "name": "codex-jetbrains-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "author": "nealzhi",
+  "description": "MCP adapter that lets Codex read JetBrains selection context from the Claude Code JetBrains plugin.",
+  "bin": {
+    "codex-jetbrains-mcp": "./src/index.mjs",
+    "codex-jetbrains-hud": "./bin/codex-jetbrains-hud"
+  },
+  "scripts": {
+    "start": "node ./src/index.mjs",
+    "hud": "node ./src/hud.mjs",
+    "check": "node --check ./src/index.mjs && node --check ./src/bridge-server.mjs && node --check ./src/claude-jetbrains-client.mjs && node --check ./src/ide-discovery.mjs && node --check ./src/ws-transport.mjs && node --check ./src/hud.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.1",
+    "ws": "^8.18.3",
+    "zod": "^3.24.1"
+  }
+}

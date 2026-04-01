@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+HUD_CMD=(node "${ROOT_DIR}/src/hud.mjs" --cwd "${PWD}")
+CODEX_CMD_BIN="$(command -v codex || true)"
+SESSION_NAME="codex-jb-hud-$(date +%Y%m%d%H%M%S)-$$"
+HUD_HEIGHT="${CODEX_JB_HUD_HEIGHT:-2}"
+HUD_POSITION="${CODEX_JB_HUD_POSITION:-bottom}"
+TMUX_STATUS_LEFT="${CODEX_JB_HUD_TMUX_STATUS_LEFT:-codex-jb-hud}"
+TMUX_WINDOW_STATUS_CURRENT="${CODEX_JB_HUD_TMUX_WINDOW_STATUS_CURRENT:-}"
+TMUX_WINDOW_STATUS="${CODEX_JB_HUD_TMUX_WINDOW_STATUS:-}"
+TMUX_STATUS_RIGHT="${CODEX_JB_HUD_TMUX_STATUS_RIGHT:-%Y-%m-%d %H:%M}"
+
+if [[ -z "${TERM:-}" || "${TERM:-}" == "dumb" ]]; then
+  export TERM="xterm-256color"
+fi
+
+if [[ -z "${CODEX_CMD_BIN}" ]]; then
+  echo "Error: codex 不在 PATH 里" >&2
+  exit 1
+fi
+
+if [[ "${CODEX_CMD_BIN}" == "${SCRIPT_DIR}/codex-jetbrains-hud" ]]; then
+  echo "Error: 当前 codex 命令指向了 HUD 自己，避免递归请改用真实 codex 可执行文件" >&2
+  exit 1
+fi
+
+if ! command -v tmux >/dev/null 2>&1; then
+  echo "Error: 需要先安装 tmux。macOS 可执行: brew install tmux" >&2
+  exit 1
+fi
+
+if [[ "${HUD_POSITION}" != "bottom" && "${HUD_POSITION}" != "top" ]]; then
+  echo "Error: CODEX_JB_HUD_POSITION 只能是 bottom 或 top" >&2
+  exit 1
+fi
+
+if ! [[ "${HUD_HEIGHT}" =~ ^[0-9]+$ ]] || [[ "${HUD_HEIGHT}" -lt 2 ]]; then
+  echo "Error: CODEX_JB_HUD_HEIGHT 必须是 >= 2 的整数" >&2
+  exit 1
+fi
+
+MAIN_COMMAND=("${CODEX_CMD_BIN}" "$@")
+MAIN_COMMAND_STRING="$(printf '%q ' "${MAIN_COMMAND[@]}")"
+HUD_COMMAND_STRING="$(printf '%q ' "${HUD_CMD[@]}")"
+
+SPLIT_ARGS=(-v)
+if [[ "${HUD_POSITION}" == "top" ]]; then
+  SPLIT_ARGS+=(-b)
+fi
+
+tmux new-session -d -s "${SESSION_NAME}" -c "${PWD}" \
+  "sh -lc '${MAIN_COMMAND_STRING}; status=\$?; tmux kill-session -t ${SESSION_NAME}; exit \$status'"
+
+tmux set-option -t "${SESSION_NAME}" status on
+tmux set-option -t "${SESSION_NAME}" status-interval 10
+tmux set-option -t "${SESSION_NAME}" status-left-length 40
+tmux set-option -t "${SESSION_NAME}" status-left "${TMUX_STATUS_LEFT}"
+tmux set-window-option -t "${SESSION_NAME}" window-status-format "${TMUX_WINDOW_STATUS}"
+tmux set-window-option -t "${SESSION_NAME}" window-status-current-format "${TMUX_WINDOW_STATUS_CURRENT}"
+tmux set-option -t "${SESSION_NAME}" status-right "${TMUX_STATUS_RIGHT}"
+
+tmux split-window -d "${SPLIT_ARGS[@]}" -t "${SESSION_NAME}:0.0" -l "${HUD_HEIGHT}" -c "${PWD}" \
+  "sh -lc '${HUD_COMMAND_STRING}'"
+
+exec tmux attach-session -t "${SESSION_NAME}"
