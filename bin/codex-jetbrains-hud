@@ -7,12 +7,16 @@ ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HUD_CMD=(node "${ROOT_DIR}/src/hud.mjs" --cwd "${PWD}")
 CODEX_CMD_BIN="$(command -v codex || true)"
 SESSION_NAME="codex-jb-hud-$(date +%Y%m%d%H%M%S)-$$"
-HUD_HEIGHT="${CODEX_JB_HUD_HEIGHT:-2}"
+HUD_HEIGHT="${CODEX_JB_HUD_HEIGHT:-1}"
 HUD_POSITION="${CODEX_JB_HUD_POSITION:-bottom}"
-TMUX_STATUS_LEFT="${CODEX_JB_HUD_TMUX_STATUS_LEFT:-codex-jb-hud}"
+TMUX_STATUS_LEFT="${CODEX_JB_HUD_TMUX_STATUS_LEFT:-}"
 TMUX_WINDOW_STATUS_CURRENT="${CODEX_JB_HUD_TMUX_WINDOW_STATUS_CURRENT:-}"
 TMUX_WINDOW_STATUS="${CODEX_JB_HUD_TMUX_WINDOW_STATUS:-}"
 TMUX_STATUS_RIGHT="${CODEX_JB_HUD_TMUX_STATUS_RIGHT:-%Y-%m-%d %H:%M}"
+TMUX_STATUS_STYLE="${CODEX_JB_HUD_TMUX_STATUS_STYLE:-fg=colour244,bg=default}"
+TMUX_STATUS_CURRENT_STYLE="${CODEX_JB_HUD_TMUX_STATUS_CURRENT_STYLE:-fg=colour252,bg=default}"
+TMUX_PANE_BORDER_STYLE="${CODEX_JB_HUD_TMUX_PANE_BORDER_STYLE:-fg=colour238}"
+TMUX_PANE_ACTIVE_BORDER_STYLE="${CODEX_JB_HUD_TMUX_PANE_ACTIVE_BORDER_STYLE:-fg=colour240}"
 
 if [[ -z "${TERM:-}" || "${TERM:-}" == "dumb" ]]; then
   export TERM="xterm-256color"
@@ -38,8 +42,8 @@ if [[ "${HUD_POSITION}" != "bottom" && "${HUD_POSITION}" != "top" ]]; then
   exit 1
 fi
 
-if ! [[ "${HUD_HEIGHT}" =~ ^[0-9]+$ ]] || [[ "${HUD_HEIGHT}" -lt 2 ]]; then
-  echo "Error: CODEX_JB_HUD_HEIGHT 必须是 >= 2 的整数" >&2
+if ! [[ "${HUD_HEIGHT}" =~ ^[0-9]+$ ]] || [[ "${HUD_HEIGHT}" -lt 1 ]]; then
+  echo "Error: CODEX_JB_HUD_HEIGHT 必须是 >= 1 的整数" >&2
   exit 1
 fi
 
@@ -57,13 +61,28 @@ tmux new-session -d -s "${SESSION_NAME}" -c "${PWD}" \
 
 tmux set-option -t "${SESSION_NAME}" status on
 tmux set-option -t "${SESSION_NAME}" status-interval 10
+tmux set-option -t "${SESSION_NAME}" status-style "${TMUX_STATUS_STYLE}"
 tmux set-option -t "${SESSION_NAME}" status-left-length 40
+tmux set-option -t "${SESSION_NAME}" status-left-style "${TMUX_STATUS_STYLE}"
 tmux set-option -t "${SESSION_NAME}" status-left "${TMUX_STATUS_LEFT}"
+tmux set-option -t "${SESSION_NAME}" status-right-style "${TMUX_STATUS_STYLE}"
+tmux set-option -t "${SESSION_NAME}" message-style "${TMUX_STATUS_STYLE}"
+tmux set-option -t "${SESSION_NAME}" pane-border-style "${TMUX_PANE_BORDER_STYLE}"
+tmux set-option -t "${SESSION_NAME}" pane-active-border-style "${TMUX_PANE_ACTIVE_BORDER_STYLE}"
+tmux set-window-option -t "${SESSION_NAME}" window-status-style "${TMUX_STATUS_STYLE}"
+tmux set-window-option -t "${SESSION_NAME}" window-status-current-style "${TMUX_STATUS_CURRENT_STYLE}"
 tmux set-window-option -t "${SESSION_NAME}" window-status-format "${TMUX_WINDOW_STATUS}"
 tmux set-window-option -t "${SESSION_NAME}" window-status-current-format "${TMUX_WINDOW_STATUS_CURRENT}"
 tmux set-option -t "${SESSION_NAME}" status-right "${TMUX_STATUS_RIGHT}"
 
-tmux split-window -d "${SPLIT_ARGS[@]}" -t "${SESSION_NAME}:0.0" -l "${HUD_HEIGHT}" -c "${PWD}" \
-  "sh -lc '${HUD_COMMAND_STRING}'"
+HUD_PANE_ID="$(
+  tmux split-window -d -P -F '#{pane_id}' "${SPLIT_ARGS[@]}" -t "${SESSION_NAME}:0.0" -l "${HUD_HEIGHT}" -c "${PWD}" \
+    "sh -lc '${HUD_COMMAND_STRING}'"
+)"
+
+tmux resize-pane -t "${HUD_PANE_ID}" -y "${HUD_HEIGHT}"
+tmux set-hook -t "${SESSION_NAME}" client-attached "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
+tmux set-hook -t "${SESSION_NAME}" client-resized "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
+tmux set-hook -w -t "${SESSION_NAME}:0" window-resized "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
 
 exec tmux attach-session -t "${SESSION_NAME}"

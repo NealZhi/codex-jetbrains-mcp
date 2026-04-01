@@ -97,8 +97,6 @@ function formatSelectionRange(selection) {
 function render(snapshot) {
   const { connection, ide, selection } = snapshot
   const connected = connection === 'connected'
-  const icon = connected ? '●' : connection === 'connecting' ? '◐' : '○'
-  const transport = ide?.transport ?? 'none'
   const ideName = ide?.ideName ?? 'JetBrains'
   const filePath = selection.filePath
   const fileName = filePath ? basename(filePath) : '未捕获到文件'
@@ -106,21 +104,15 @@ function render(snapshot) {
   const linesLabel =
     selection.lineCount > 1 ? ` (${selection.lineCount} lines)` : ''
 
-  const line1 = `JetBrains ${icon} ${ideName} · ${transport} · ${connected ? '已连接' : connection}`
-  const line2 = `Selection: ${fileName}:${range}${linesLabel}`
+  const connectionLabel = connected ? '已连接' : connection
+  const ideLabel = `JetBrains ${ideName}`
 
-  return [line1, line2].join('\n')
+  return `${ideLabel} ${connectionLabel} | ${fileName}:${range}${linesLabel}`
 }
 
 function renderFrame(text) {
-  const lines = text.split('\n').slice(0, 2)
-  while (lines.length < 2) {
-    lines.push('')
-  }
-
   process.stdout.write('\x1b[H')
-  process.stdout.write(`\x1b[2K${lines[0]}\n`)
-  process.stdout.write(`\x1b[2K${lines[1]}`)
+  process.stdout.write(`\x1b[2K${text}`)
   process.stdout.write('\x1b[J')
 }
 
