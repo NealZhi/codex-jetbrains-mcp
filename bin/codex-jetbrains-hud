@@ -5,7 +5,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 HUD_CMD=(node "${ROOT_DIR}/src/hud.mjs" --cwd "${PWD}")
-CODEX_CMD_BIN="$(command -v codex || true)"
+CODEX_CMD_BIN="${CODEX_JB_HUD_CODEX_BIN:-$(command -v codex || true)}"
 SESSION_NAME="codex-jb-hud-$(date +%Y%m%d%H%M%S)-$$"
 HUD_HEIGHT="${CODEX_JB_HUD_HEIGHT:-1}"
 HUD_POSITION="${CODEX_JB_HUD_POSITION:-bottom}"
@@ -17,6 +17,7 @@ TMUX_STATUS_STYLE="${CODEX_JB_HUD_TMUX_STATUS_STYLE:-fg=colour244,bg=default}"
 TMUX_STATUS_CURRENT_STYLE="${CODEX_JB_HUD_TMUX_STATUS_CURRENT_STYLE:-fg=colour252,bg=default}"
 TMUX_PANE_BORDER_STYLE="${CODEX_JB_HUD_TMUX_PANE_BORDER_STYLE:-fg=colour238}"
 TMUX_PANE_ACTIVE_BORDER_STYLE="${CODEX_JB_HUD_TMUX_PANE_ACTIVE_BORDER_STYLE:-fg=colour240}"
+SESSION_SHELL="${SHELL:-/bin/sh}"
 
 if [[ -z "${TERM:-}" || "${TERM:-}" == "dumb" ]]; then
   export TERM="xterm-256color"
@@ -50,14 +51,17 @@ fi
 MAIN_COMMAND=("${CODEX_CMD_BIN}" "$@")
 MAIN_COMMAND_STRING="$(printf '%q ' "${MAIN_COMMAND[@]}")"
 HUD_COMMAND_STRING="$(printf '%q ' "${HUD_CMD[@]}")"
+MAIN_PANE_COMMAND="sh -lc '${MAIN_COMMAND_STRING}; status=\$?; tmux kill-session -t ${SESSION_NAME}; exit \$status'"
 
 SPLIT_ARGS=(-v)
 if [[ "${HUD_POSITION}" == "top" ]]; then
   SPLIT_ARGS+=(-b)
 fi
 
-tmux new-session -d -s "${SESSION_NAME}" -c "${PWD}" \
-  "sh -lc '${MAIN_COMMAND_STRING}; status=\$?; tmux kill-session -t ${SESSION_NAME}; exit \$status'"
+MAIN_PANE_ID="$(
+  tmux new-session -d -P -F '#{pane_id}' -s "${SESSION_NAME}" -c "${PWD}" "${SESSION_SHELL}"
+)"
+MAIN_WINDOW_ID="$(tmux display-message -p -t "${MAIN_PANE_ID}" '#{window_id}')"
 
 tmux set-option -t "${SESSION_NAME}" status on
 tmux set-option -t "${SESSION_NAME}" status-interval 10
@@ -76,13 +80,14 @@ tmux set-window-option -t "${SESSION_NAME}" window-status-current-format "${TMUX
 tmux set-option -t "${SESSION_NAME}" status-right "${TMUX_STATUS_RIGHT}"
 
 HUD_PANE_ID="$(
-  tmux split-window -d -P -F '#{pane_id}' "${SPLIT_ARGS[@]}" -t "${SESSION_NAME}:0.0" -l "${HUD_HEIGHT}" -c "${PWD}" \
+  tmux split-window -d -P -F '#{pane_id}' "${SPLIT_ARGS[@]}" -t "${MAIN_PANE_ID}" -l "${HUD_HEIGHT}" -c "${PWD}" \
     "sh -lc '${HUD_COMMAND_STRING}'"
 )"
 
 tmux resize-pane -t "${HUD_PANE_ID}" -y "${HUD_HEIGHT}"
 tmux set-hook -t "${SESSION_NAME}" client-attached "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
 tmux set-hook -t "${SESSION_NAME}" client-resized "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
-tmux set-hook -w -t "${SESSION_NAME}:0" window-resized "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
+tmux set-hook -w -t "${MAIN_WINDOW_ID}" window-resized "resize-pane -t ${HUD_PANE_ID} -y ${HUD_HEIGHT}"
+tmux respawn-pane -k -t "${MAIN_PANE_ID}" "${MAIN_PANE_COMMAND}"
 
 exec tmux attach-session -t "${SESSION_NAME}"
