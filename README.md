@@ -1,3 +1,8 @@
+<p align="center">
+  <a href="./README.md"><img src="https://img.shields.io/badge/lang-中文-red.svg" alt="中文"></a>
+  <a href="./README.en.md"><img src="https://img.shields.io/badge/lang-English-blue.svg" alt="English"></a>
+</p>
+
 # Codex JetBrains 接入说明
 
 > 项目背景：这个适配方案是基于对 `Claude Code v2.1.88` 泄露源码的分析做出来的，目标是让 `Codex` 也具备类似 `Claude Code` 的能力，能够感知 JetBrains 系列 IDE 当前选中的文件、行号和代码范围。

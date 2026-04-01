@@ -1,3 +1,8 @@
+<p align="center">
+  <a href="./README.md"><img src="https://img.shields.io/badge/lang-中文-red.svg" alt="中文"></a>
+  <a href="./README.en.md"><img src="https://img.shields.io/badge/lang-English-blue.svg" alt="English"></a>
+</p>
+
 # Codex JetBrains Integration Guide
 
 > Background: this adapter was built from analysis of leaked `Claude Code v2.1.88` source code, with the goal of giving `Codex` similar awareness of the current selection inside JetBrains IDEs.
