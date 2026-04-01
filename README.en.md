@@ -78,11 +78,10 @@ If mouse scrolling does not work for the Codex window in macOS Terminal or Warp,
 tmux set -g mouse on
 ```
 
-The HUD should show:
+The HUD should show a single line:
 
 ```text
-JetBrains ● PyCharm · ws · connected
-Selection: tender_gen_service.py:2140-2147 (8 lines)
+JetBrains PyCharm 已连接 | test_main.py:2140-2147 (8 lines)
 ```
 
 ## 5. Add the global prompt

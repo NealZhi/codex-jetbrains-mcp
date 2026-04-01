@@ -87,11 +87,10 @@ source ~/.bashrc
 tmux set -g mouse on
 ```
 
-HUD 启动后会显示两行：
+HUD 启动后会显示一行：
 
 ```text
-JetBrains ● PyCharm · ws · 已连接
-Selection: tender_gen_service.py:2140-2147 (8 lines)
+JetBrains PyCharm 已连接 | test_main.py:2140-2147 (8 lines)
 ```
 
 ## 5. 接入全局提示词
