@@ -8,3 +8,4 @@ pnpm-debug.log*
 .env
 .env.*
 AGENTS.md
+.codex/jetbrains-selection-state.json

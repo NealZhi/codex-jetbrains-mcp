@@ -3,6 +3,13 @@
 import process from 'node:process'
 import { basename, resolve } from 'node:path'
 import { ClaudeJetBrainsClientBridge } from './claude-jetbrains-client.mjs'
+import {
+  createEmptySelectionState,
+  createSelectionState,
+  writeSelectionState,
+} from './selection-state.mjs'
+
+const STATE_SYNC_INTERVAL_MS = 5000
 
 function parseArgs(argv) {
   const options = {
@@ -107,7 +114,7 @@ function render(snapshot) {
   const connectionLabel = connected ? '已连接' : connection
   const ideLabel = `JetBrains ${ideName}`
 
-  return `${ideLabel} ${connectionLabel} | ${fileName}:${range}${linesLabel}`
+  return `  ${ideLabel} ${connectionLabel} | ${fileName}:${range}${linesLabel}`
 }
 
 function renderFrame(text) {
@@ -119,15 +126,51 @@ function renderFrame(text) {
 async function run() {
   const options = parseArgs(process.argv.slice(2))
   const bridge = new ClaudeJetBrainsClientBridge(options)
+  let writeInFlight = null
+  let stateTimer = null
+
+  const queuePersist = snapshot => {
+    const task = async () => {
+      const state = createSelectionState(snapshot, { cwd: options.cwd })
+      await writeSelectionState(state, { cwd: options.cwd })
+    }
+
+    writeInFlight = (writeInFlight ?? Promise.resolve())
+      .then(task)
+      .catch(error => {
+        console.error(
+          `[codex-jetbrains-hud] failed to persist selection state: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        )
+      })
+
+    return writeInFlight
+  }
+
+  const persistEmptyState = async () => {
+    const state = createEmptySelectionState({ cwd: options.cwd })
+    await writeSelectionState(state, { cwd: options.cwd })
+  }
+
   await bridge.start()
+  await queuePersist(bridge.snapshot())
 
   const shutdown = async () => {
     if (shutdown.done) {
       return
     }
     shutdown.done = true
+    if (stateTimer) {
+      clearInterval(stateTimer)
+      stateTimer = null
+    }
     await bridge.stop()
-    process.exit(0)
+    try {
+      await persistEmptyState()
+    } finally {
+      process.exit(0)
+    }
   }
   shutdown.done = false
 
@@ -148,6 +191,7 @@ async function run() {
 
   if (options.once) {
     await bridge.stop()
+    await persistEmptyState()
     return
   }
 
@@ -155,6 +199,11 @@ async function run() {
     printSnapshot()
   }, options.refreshMs)
   timer.unref?.()
+
+  stateTimer = setInterval(() => {
+    void queuePersist(bridge.snapshot())
+  }, STATE_SYNC_INTERVAL_MS)
+  stateTimer.unref?.()
 }
 
 try {

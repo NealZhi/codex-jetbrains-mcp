@@ -5,15 +5,14 @@
   "type": "module",
   "license": "MIT",
   "author": "nealzhi",
-  "description": "MCP adapter that lets Codex read JetBrains selection context from the Claude Code JetBrains plugin.",
+  "description": "HUD and hooks bridge for sharing JetBrains selection context with Codex.",
   "bin": {
-    "codex-jetbrains-mcp": "./src/index.mjs",
     "codex-jetbrains-hud": "./bin/codex-jetbrains-hud"
   },
   "scripts": {
-    "start": "node ./src/index.mjs",
+    "start": "node ./src/hud.mjs",
     "hud": "node ./src/hud.mjs",
-    "check": "node --check ./src/index.mjs && node --check ./src/bridge-server.mjs && node --check ./src/claude-jetbrains-client.mjs && node --check ./src/ide-discovery.mjs && node --check ./src/ws-transport.mjs && node --check ./src/hud.mjs"
+    "check": "node --check ./src/claude-jetbrains-client.mjs && node --check ./src/ide-discovery.mjs && node --check ./src/ws-transport.mjs && node --check ./src/hud.mjs && node --check ./src/selection-state.mjs && node --check ./.codex/hooks/selection-state.mjs && node --check ./.codex/hooks/user-prompt-submit-jetbrains-selection.mjs"
   },
   "engines": {
     "node": ">=20.0.0"
